@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Johnny's Stag — Pub Golf Duo Tracker</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f2; color: #1a1a1a;
+      max-width: 480px; margin: 0 auto; padding: 0.75rem;
+    }
+    .banner { text-align: center; padding: 1rem 0 0.5rem; }
+    .banner h1 { font-size: 20px; font-weight: 600; }
+    .banner p  { font-size: 13px; color: #666; margin-top: 3px; }
+    .name-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0.75rem 0; }
+    .name-inputs input {
+      width: 100%; font-size: 14px; text-align: center; padding: 8px;
+      border-radius: 8px; border: 1px solid #ccc; background: #fff;
+      color: #1a1a1a; font-family: inherit;
+    }
+    .name-inputs input:disabled { background: #f5f5f2; color: #888; border-color: #e0ddd6; }
+    .scoreboard { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 6px; }
+    .stat { background: #eeecea; border-radius: 8px; padding: 0.75rem; text-align: center; }
+    .stat .name { font-size: 12px; color: #666; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat .val  { font-size: 32px; font-weight: 600; line-height: 1; }
+    .stat .diff { font-size: 12px; margin-top: 4px; min-height: 16px; }
+    .stat.winning .val  { color: #166534; }
+    .stat.winning .diff { color: #166534; }
+    .stat.losing .val   { color: #991B1B; }
+    .stat.losing .diff  { color: #991B1B; }
+    .vs-line { text-align: center; font-size: 12px; color: #888; margin-bottom: 0.75rem; }
+    .hole-card {
+      background: #fff; border: 1px solid #e0ddd6;
+      border-radius: 12px; padding: 0.875rem; margin-bottom: 0.625rem;
+      transition: opacity 0.2s;
+    }
+    .hole-card.locked { background: #fafaf8; }
+    .hole-card.upcoming { opacity: 0.45; pointer-events: none; }
+    .hole-hdr { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+    .hole-num { font-size: 11px; font-weight: 600; color: #999; flex-shrink: 0; }
+    .hole-pub { font-size: 15px; font-weight: 600; color: #1a1a1a; flex: 1; outline: none; cursor: text; border-bottom: 1px dashed #ccc; }
+    .hole-pub:focus { background: #e8f0fe; border-radius: 4px; border-bottom-color: transparent; padding: 0 3px; }
+    .hole-pub.locked-text { cursor: default; border-bottom-color: transparent; pointer-events: none; }
+    .hole-meta { font-size: 11px; color: #888; margin-bottom: 10px; display: flex; flex-direction: column; gap: 3px; }
+    .hole-meta span { outline: none; cursor: text; font-style: italic; }
+    .hole-meta span:focus { background: #fffbe6; border-radius: 3px; font-style: normal; padding: 0 2px; }
+    .hole-meta span.locked-text { cursor: default; pointer-events: none; }
+    .meta-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #bbb; margin-right: 3px; font-style: normal !important; }
+    .beer-lbl { color: #b07a00; }
+    .rule-lbl { color: #a03030; }
+    .hole-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .player-inp { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .player-inp label { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    .score-btn-row { display: flex; align-items: center; gap: 8px; }
+    .score-btn-row button {
+      width: 36px; height: 36px; border-radius: 8px; border: 1px solid #ccc;
+      background: #fff; font-size: 18px; font-weight: 500; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: #1a1a1a; -webkit-tap-highlight-color: transparent;
+    }
+    .score-btn-row button:active { background: #f0ede8; transform: scale(0.94); }
+    .score-btn-row button:disabled { opacity: 0.25; cursor: default; }
+    .score-val { font-size: 26px; font-weight: 600; min-width: 30px; text-align: center; color: #1a1a1a; }
+    .score-val.eagle  { color: #1D4ED8; }
+    .score-val.birdie { color: #166534; }
+    .score-val.bogey  { color: #854D0E; }
+    .score-val.double { color: #991B1B; }
+    .par-row {
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;
+    }
+    .par-row label { font-size: 12px; color: #888; }
+    .par-row input {
+      width: 40px; height: 30px; text-align: center; border: 1px solid #ccc;
+      border-radius: 6px; background: #fff; color: #1a1a1a;
+      font-size: 14px; font-family: inherit;
+    }
+    .par-row input:disabled { background: #f5f5f2; color: #aaa; border-color: #e0ddd6; }
+    .lock-btn {
+      display: block; width: 100%; margin-top: 10px; padding: 10px;
+      border-radius: 8px; border: none; font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: inherit; background: #1a1a1a; color: #fff;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .lock-btn:active { background: #333; transform: scale(0.98); }
+    .locked-badge {
+      display: none; width: 100%; margin-top: 10px; padding: 8px;
+      border-radius: 8px; text-align: center; font-size: 13px; font-weight: 600;
+      color: #166534; background: #DCFCE7; border: 1px solid #BBF7D0;
+    }
+    .hole-result { font-size: 12px; font-weight: 600; text-align: center; margin-top: 7px; min-height: 16px; }
+    .hole-result.p1     { color: #185FA5; }
+    .hole-result.p2     { color: #993C1D; }
+    .hole-result.halved { color: #888; }
+    .reset-row { text-align: center; margin: 1rem 0 0.5rem; }
+    .reset-row button {
+      font-size: 13px; color: #888; border: 1px solid #ddd;
+      border-radius: 8px; background: #fff; padding: 7px 18px;
+      cursor: pointer; font-family: inherit;
+    }
+    .reset-row button:active { background: #f0ede8; }
+  </style>
+</head>
+<body>
+  <div class="banner">
+    <h1>🍺 Johnny's Stag — Pub Golf</h1>
+    <p>Head-to-head tracker &nbsp;•&nbsp; Düsseldorf 🇩🇪</p>
+  </div>
+  <div class="name-inputs">
+    <input id="p1name" type="text" value="Player 1" placeholder="Player 1" oninput="refreshNames()">
+    <input id="p2name" type="text" value="Player 2" placeholder="Player 2" oninput="refreshNames()">
+  </div>
+  <div class="scoreboard">
+    <div class="stat" id="sb1">
+      <div class="name" id="sb1name">Player 1</div>
+      <div class="val"  id="sb1val">—</div>
+      <div class="diff" id="sb1diff"></div>
+    </div>
+    <div class="stat" id="sb2">
+      <div class="name" id="sb2name">Player 2</div>
+      <div class="val"  id="sb2val">—</div>
+      <div class="diff" id="sb2diff"></div>
+    </div>
+  </div>
+  <div class="vs-line" id="vs-line">Enter scores to start</div>
+  <div id="holes"></div>
+  <div class="reset-row">
+    <button onclick="resetAll()">🔄 Reset everything</button>
+  </div>
+<script>
+  const HOLES = 9;
+  const pubDefaults  = ['Et Kabuffke','Uerige Brewery','Holy Craft Beer Bar','Brauerei Kurzer','Pub 5','Zum Schlussel','Suttons Irish Pub','Salmaiki','Brauerei im Fuchschen'];
+  const beerDefaults = ['Killiepitsch Stube','Altbier','Schwarzbier','Altbier & Korn Chaser','Beer TBC','Radler','Jagermeister','Hugo Spritz','Altbier'];
+  const ruleDefaults = Array(HOLES).fill('Rule TBC');
+  const parDefaults  = [1,3,4,4,3,3,1,3,4];
+
+  let pars   = [...parDefaults];
+  let s1     = Array(HOLES).fill(null);
+  let s2     = Array(HOLES).fill(null);
+  let locked = Array(HOLES).fill(false);
+
+  function currentHole() {
+    for (let i = 0; i < HOLES; i++) if (!locked[i]) return i;
+    return HOLES;
+  }
+  function scoreClass(score, par) {
+    if (score === null) return '';
+    const d = score - par;
+    if (d <= -2) return 'eagle';
+    if (d === -1) return 'birdie';
+    if (d === 0)  return '';
+    if (d === 1)  return 'bogey';
+    return 'double';
+  }
+  function buildHoles() {
+    const container = document.getElementById('holes');
+    container.innerHTML = '';
+    for (let i = 0; i < HOLES; i++) {
+      const card = document.createElement('div');
+      card.className = 'hole-card';
+      card.id = 'card' + i;
+      card.innerHTML = `
+        <div class="hole-hdr">
+          <span class="hole-num">Hole ${i+1}</span>
+          <span class="hole-pub" id="pub${i}" contenteditable="true">${pubDefaults[i]}</span>
+        </div>
+        <div class="hole-meta">
+          <div><span class="meta-lbl beer-lbl">🍺 Beer</span><span id="beer${i}" contenteditable="true">${beerDefaults[i]}</span></div>
+          <div><span class="meta-lbl rule-lbl">📋 Rule</span><span id="rule${i}" contenteditable="true">${ruleDefaults[i]}</span></div>
+        </div>
+        <div class="hole-inputs">
+          <div class="player-inp">
+            <label id="lbl1_${i}">Player 1</label>
+            <div class="score-btn-row">
+              <button id="m1_${i}" ontouchstart="" onclick="adj(0,${i},-1)">−</button>
+              <span class="score-val" id="sv1_${i}">—</span>
+              <button id="p1_${i}" ontouchstart="" onclick="adj(0,${i},1)">+</button>
+            </div>
+          </div>
+          <div class="player-inp">
+            <label id="lbl2_${i}">Player 2</label>
+            <div class="score-btn-row">
+              <button id="m2_${i}" ontouchstart="" onclick="adj(1,${i},-1)">−</button>
+              <span class="score-val" id="sv2_${i}">—</span>
+              <button id="p2_${i}" ontouchstart="" onclick="adj(1,${i},1)">+</button>
+            </div>
+          </div>
+        </div>
+        <div class="par-row">
+          <label for="par${i}">Par</label>
+          <input type="number" id="par${i}" min="1" max="9" value="${pars[i]}" oninput="setPar(${i}, this.value)">
+        </div>
+        <div class="hole-result" id="res${i}"></div>
+        <button class="lock-btn" id="lockbtn${i}" onclick="lockHole(${i})">Lock in scores ✓</button>
+        <div class="locked-badge" id="badge${i}">✓ Scores locked</div>
+      `;
+      container.appendChild(card);
+    }
+    refreshNames();
+    applyCardStates();
+  }
+  function applyCardStates() {
+    const active = currentHole();
+    for (let i = 0; i < HOLES; i++) {
+      const card    = document.getElementById('card' + i);
+      const lockBtn = document.getElementById('lockbtn' + i);
+      const badge   = document.getElementById('badge' + i);
+      const parInp  = document.getElementById('par' + i);
+      const pub     = document.getElementById('pub' + i);
+      const beer    = document.getElementById('beer' + i);
+      const rule    = document.getElementById('rule' + i);
+      const m1=document.getElementById('m1_'+i), p1=document.getElementById('p1_'+i);
+      const m2=document.getElementById('m2_'+i), p2=document.getElementById('p2_'+i);
+      if (locked[i]) {
+        card.className = 'hole-card locked';
+        lockBtn.style.display = 'none'; badge.style.display = 'block';
+        parInp.disabled = true;
+        [m1,p1,m2,p2].forEach(b => b.disabled = true);
+        [pub,beer,rule].forEach(el => { el.contentEditable='false'; el.classList.add('locked-text'); });
+      } else if (i === active) {
+        card.className = 'hole-card';
+        lockBtn.style.display = 'block'; badge.style.display = 'none';
+        parInp.disabled = false;
+        [m1,p1,m2,p2].forEach(b => b.disabled = false);
+        [pub,beer,rule].forEach(el => { el.contentEditable='true'; el.classList.remove('locked-text'); });
+      } else {
+        card.className = 'hole-card upcoming';
+        lockBtn.style.display = 'block'; badge.style.display = 'none';
+      }
+    }
+    const p1inp = document.getElementById('p1name');
+    const p2inp = document.getElementById('p2name');
+    const first = currentHole();
+    p1inp.disabled = first > 0;
+    p2inp.disabled = first > 0;
+  }
+  function lockHole(i) {
+    if (s1[i] === null || s2[i] === null) {
+      const n1 = document.getElementById('p1name').value || 'Player 1';
+      const n2 = document.getElementById('p2name').value || 'Player 2';
+      const missing = [];
+      if (s1[i] === null) missing.push(n1);
+      if (s2[i] === null) missing.push(n2);
+      alert('Still waiting on a score from: ' + missing.join(' & '));
+      return;
+    }
+    locked[i] = true;
+    applyCardStates();
+    renderScoreboard();
+    const next = currentHole();
+    if (next < HOLES) {
+      setTimeout(() => document.getElementById('card'+next).scrollIntoView({behavior:'smooth',block:'start'}), 150);
+    }
+  }
+  function adj(player, hole, delta) {
+    if (locked[hole]) return;
+    const arr = player === 0 ? s1 : s2;
+    arr[hole] = Math.max(1, (arr[hole] === null ? pars[hole] : arr[hole]) + delta);
+    renderHole(hole); renderScoreboard();
+  }
+  function setPar(hole, val) {
+    if (locked[hole]) return;
+    pars[hole] = Math.max(1, parseInt(val) || 3);
+    renderHole(hole); renderScoreboard();
+  }
+  function renderHole(i) {
+    const v1=document.getElementById('sv1_'+i), v2=document.getElementById('sv2_'+i);
+    const res=document.getElementById('res'+i);
+    const p=pars[i];
+    const n1=document.getElementById('p1name').value||'Player 1';
+    const n2=document.getElementById('p2name').value||'Player 2';
+    v1.textContent = s1[i]!==null ? s1[i] : '—'; v1.className='score-val '+scoreClass(s1[i],p);
+    v2.textContent = s2[i]!==null ? s2[i] : '—'; v2.className='score-val '+scoreClass(s2[i],p);
+    if (s1[i]!==null && s2[i]!==null) {
+      if      (s1[i]<s2[i]) { res.textContent=n1+' wins hole'; res.className='hole-result p1'; }
+      else if (s2[i]<s1[i]) { res.textContent=n2+' wins hole'; res.className='hole-result p2'; }
+      else                   { res.textContent='Halved';        res.className='hole-result halved'; }
+    } else { res.textContent=''; res.className='hole-result'; }
+  }
+  function renderScoreboard() {
+    const t1 = s1.reduce((a,v,i)=>locked[i]&&v!==null?a+v:a, 0) || null;
+    const t2 = s2.reduce((a,v,i)=>locked[i]&&v!==null?a+v:a, 0) || null;
+    const hasLocked1 = s1.some((v,i)=>locked[i]&&v!==null);
+    const hasLocked2 = s2.some((v,i)=>locked[i]&&v!==null);
+    const n1=document.getElementById('p1name').value||'Player 1';
+    const n2=document.getElementById('p2name').value||'Player 2';
+    document.getElementById('sb1val').textContent = hasLocked1 ? t1 : '—';
+    document.getElementById('sb2val').textContent = hasLocked2 ? t2 : '—';
+    document.getElementById('sb1').className='stat';
+    document.getElementById('sb2').className='stat';
+    document.getElementById('sb1diff').textContent='';
+    document.getElementById('sb2diff').textContent='';
+    const vsLine=document.getElementById('vs-line');
+    if (hasLocked1 && hasLocked2) {
+      const diff=Math.abs(t1-t2);
+      if (t1<t2) {
+        document.getElementById('sb1').className='stat winning';
+        document.getElementById('sb2').className='stat losing';
+        document.getElementById('sb1diff').textContent=diff?'▲ '+diff+' up':'';
+        document.getElementById('sb2diff').textContent=diff?'▼ '+diff+' down':'';
+        vsLine.textContent=diff?n1+' is leading':'All square';
+      } else if (t2<t1) {
+        document.getElementById('sb2').className='stat winning';
+        document.getElementById('sb1').className='stat losing';
+        document.getElementById('sb2diff').textContent=diff?'▲ '+diff+' up':'';
+        document.getElementById('sb1diff').textContent=diff?'▼ '+diff+' down':'';
+        vsLine.textContent=diff?n2+' is leading':'All square';
+      } else { vsLine.textContent='All square'; }
+    } else if (hasLocked1) { vsLine.textContent='Waiting for '+n2+'\'s scores...';
+    } else if (hasLocked2) { vsLine.textContent='Waiting for '+n1+'\'s scores...';
+    } else { vsLine.textContent='Enter scores to start'; }
+  }
+  function refreshNames() {
+    const n1=document.getElementById('p1name').value||'Player 1';
+    const n2=document.getElementById('p2name').value||'Player 2';
+    document.getElementById('sb1name').textContent=n1;
+    document.getElementById('sb2name').textContent=n2;
+    for (let i=0;i<HOLES;i++) {
+      const l1=document.getElementById('lbl1_'+i), l2=document.getElementById('lbl2_'+i);
+      if(l1) l1.textContent=n1; if(l2) l2.textContent=n2;
+      renderHole(i);
+    }
+    renderScoreboard();
+  }
+  function resetAll() {
+    if (!confirm('Reset everything — scores, locks, and names?')) return;
+    s1=Array(HOLES).fill(null); s2=Array(HOLES).fill(null);
+    locked=Array(HOLES).fill(false); pars=[...parDefaults];
+    document.getElementById('p1name').value='Player 1';
+    document.getElementById('p2name').value='Player 2';
+    buildHoles(); renderScoreboard();
+  }
+  buildHoles(); renderScoreboard();
+</script>
+</body>
+</html>
