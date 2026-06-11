@@ -135,14 +135,14 @@
   const pubDefaults  = ['Et Kabuffke','Uerige Brewery','Kasematten','Holy Craft Beer Bar','Brauerei Kurzer','Zum Schlussel','Suttons Irish Pub','Kreuzherreneck','Brauerei im Fuchschen'];
   const beerDefaults = ['Killiepitsch Stube','Altbier','Schwarzbier','Altbier & Korn Chaser','Beer TBC','Radler','Jagermeister','Hugo Spritz','Altbier'];
   const ruleDefaults = Array(HOLES).fill('No Rule');
-  const parDefaults  = [1,3,4,4,3,3,1,3,4];
+  const parDefaults  = [1,4,3,4,5,3,2,1,4];
 
   let pars   = [...parDefaults];
   let s1     = Array(HOLES).fill(null);
   let s2     = Array(HOLES).fill(null);
   let locked = Array(HOLES).fill(false);
-  let p1name = 'Player 1';
-  let p2name = 'Player 2';
+  let p1name = 'Johnny';
+  let p2name = 'Kat';
 
   function saveState() {
     const state = {
