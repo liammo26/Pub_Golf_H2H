@@ -132,9 +132,9 @@
 <script>
   const HOLES = 9;
   const STORAGE_KEY = 'pubgolf_duo';
-  const pubDefaults  = ['Et Kabuffke','Uerige Brewery','Holy Craft Beer Bar','Brauerei Kurzer','Pub 5','Zum Schlussel','Suttons Irish Pub','Salmaiki','Brauerei im Fuchschen'];
+  const pubDefaults  = ['Et Kabuffke','Uerige Brewery','Kasematten','Holy Craft Beer Bar','Brauerei Kurzer','Zum Schlussel','Suttons Irish Pub','Kreuzherreneck','Brauerei im Fuchschen'];
   const beerDefaults = ['Killiepitsch Stube','Altbier','Schwarzbier','Altbier & Korn Chaser','Beer TBC','Radler','Jagermeister','Hugo Spritz','Altbier'];
-  const ruleDefaults = Array(HOLES).fill('Rule TBC');
+  const ruleDefaults = Array(HOLES).fill('No Rule');
   const parDefaults  = [1,3,4,4,3,3,1,3,4];
 
   let pars   = [...parDefaults];
@@ -193,7 +193,7 @@
           <span class="hole-pub" id="pub${i}" contenteditable="true">${pubDefaults[i]}</span>
         </div>
         <div class="hole-meta">
-          <div><span class="meta-lbl beer-lbl">🍺 Beer</span><span id="beer${i}" contenteditable="true">${beerDefaults[i]}</span></div>
+          <div><span class="meta-lbl beer-lbl">🍺 Drink</span><span id="beer${i}" contenteditable="true">${beerDefaults[i]}</span></div>
           <div><span class="meta-lbl rule-lbl">📋 Rule</span><span id="rule${i}" contenteditable="true">${ruleDefaults[i]}</span></div>
         </div>
         <div class="hole-inputs">
