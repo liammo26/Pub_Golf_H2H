@@ -127,13 +127,21 @@
     .hole-result.p2     { color: #993C1D; }
     .hole-result.halved { color: #888; }
 
-    .reset-row { text-align: center; margin: 1rem 0 0.5rem; }
+    .reset-row { text-align: center; margin: 1rem 0 0.5rem; display: flex; flex-direction: column; align-items: center; gap: 8px; }
     .reset-row button {
       font-size: 13px; color: #888; border: 1px solid #ddd;
       border-radius: 8px; background: #fff; padding: 7px 18px;
       cursor: pointer; font-family: inherit;
     }
     .reset-row button:active { background: #f0ede8; }
+    .export-grid-btn {
+      font-size: 14px; font-weight: 600; color: #fff;
+      border: none; border-radius: 8px; background: #1a1a1a;
+      padding: 10px 22px; cursor: pointer; font-family: inherit;
+      display: none; -webkit-tap-highlight-color: transparent;
+    }
+    .export-grid-btn:active { background: #333; transform: scale(0.98); }
+    .export-grid-btn.visible { display: inline-block; }
 
     /* Storage warning */
     .storage-warn {
@@ -154,8 +162,8 @@
   </div>
 
   <div class="name-inputs">
-    <input id="p1name" type="text" value="Player 1" placeholder="Player 1" oninput="refreshNames(); saveState();">
-    <input id="p2name" type="text" value="Player 2" placeholder="Player 2" oninput="refreshNames(); saveState();">
+    <input id="p1name" type="text" value="Player 1" placeholder="Johnny" oninput="refreshNames(); saveState();">
+    <input id="p2name" type="text" value="Player 2" placeholder="Kat" oninput="refreshNames(); saveState();">
   </div>
 
   <div class="scoreboard">
@@ -175,6 +183,7 @@
   <div id="holes"></div>
 
   <div class="reset-row">
+    <button class="export-grid-btn" id="exportGridBtn" onclick="exportPhotoGrid()">🖼️ Export photo grid</button>
     <button onclick="resetAll()">🔄 Reset everything</button>
   </div>
 
@@ -185,7 +194,7 @@
   const MAX_PHOTO_DIM = 800; // compress to max 800px wide/tall
   const PHOTO_QUALITY = 0.65;
 
-  const pubDefaults  = ['Et Kabuffke','Uerige Brewery','Kasematten','Holy Craft Beer Bar','Brauerei Kurzer','Zum Schlussel','Suttons Irish Pub','Kreuzherreneck','Brauerei im Fuchschen'];
+  const pubDefaults  = ['Et Kabuffke','Uerige Brewery','Kasematten','Holy Craft Beer Bar','Brauerei Kurzer','Zum Schlussel','Suttons Irish Pub','Salmaiki','Brauerei im Fuchschen'];
   const beerDefaults = ['Killiepitsch Stube','Altbier','Hugo Spritz','Schwarzbier','Altbier & Korn','Radler','Jagermeister','Underberg','Altbier'];
   const ruleDefaults = Array(HOLES).fill('No Rule');
   const parDefaults  = [1,4,3,4,5,3,2,1,4];
@@ -217,6 +226,7 @@
         localStorage.removeItem(PHOTO_PREFIX + index);
       }
       checkStorageUsage();
+      checkExportButton();
     } catch(e) {
       showStorageWarn();
       // Storage full — remove the photo from memory too
@@ -542,12 +552,169 @@
     buildHoles(); renderScoreboard();
   }
 
-  // ── Boot ──────────────────────────────────────────────────────────────────
+  function checkExportButton() {
+    const hasAny = photos.some(p => p !== null);
+    const btn = document.getElementById('exportGridBtn');
+    if (btn) btn.classList.toggle('visible', hasAny);
+  }
+
+  function exportPhotoGrid() {
+    const COLS = 3, ROWS = 3;
+    const CELL_W = 400, CELL_H = 340;
+    const PAD = 16, GAP = 12;
+    const LABEL_H = 36, HEADER_H = 70;
+    const CANVAS_W = COLS * CELL_W + (COLS + 1) * GAP;
+    const CANVAS_H = HEADER_H + ROWS * CELL_H + (ROWS + 1) * GAP;
+
+    const canvas = document.createElement('canvas');
+    canvas.width  = CANVAS_W;
+    canvas.height = CANVAS_H;
+    const ctx = canvas.getContext('2d');
+
+    // Background
+    ctx.fillStyle = '#f5f5f2';
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // Header
+    ctx.fillStyle = '#1a1a1a';
+    ctx.font = 'bold 28px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText("🍺 Johnny's Stag Do — Pub Golf", CANVAS_W / 2, 36);
+    ctx.fillStyle = '#888';
+    ctx.font = '18px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText('Düsseldorf 🇩🇪', CANVAS_W / 2, 60);
+
+    const p1 = document.getElementById('p1name').value || 'Player 1';
+    const p2 = document.getElementById('p2name').value || 'Player 2';
+    const t1 = s1.reduce((a,v,i)=>locked[i]&&v!==null?a+v:a,0);
+    const t2 = s2.reduce((a,v,i)=>locked[i]&&v!==null?a+v:a,0);
+    const hasScores = s1.some((v,i)=>locked[i]&&v!==null);
+
+    let loadCount = 0;
+    const totalPhotos = photos.filter(p=>p!==null).length;
+    if (totalPhotos === 0) { alert('No photos to export yet!'); return; }
+
+    function drawGrid() {
+      for (let i = 0; i < HOLES; i++) {
+        const col = i % COLS;
+        const row = Math.floor(i / COLS);
+        const x = GAP + col * (CELL_W + GAP);
+        const y = HEADER_H + GAP + row * (CELL_H + GAP);
+
+        // Cell background
+        ctx.fillStyle = '#fff';
+        roundRect(ctx, x, y, CELL_W, CELL_H, 10);
+        ctx.fill();
+
+        const imgH = CELL_H - LABEL_H;
+
+        if (photos[i]) {
+          const img = new Image();
+          img.onload = function() {
+            // Draw image cropped to fill cell
+            const iw = img.width, ih = img.height;
+            const scale = Math.max(CELL_W / iw, imgH / ih);
+            const dw = iw * scale, dh = ih * scale;
+            const dx = x + (CELL_W - dw) / 2;
+            const dy = y + (imgH - dh) / 2;
+
+            ctx.save();
+            roundRect(ctx, x, y, CELL_W, imgH, 10);
+            ctx.clip();
+            ctx.drawImage(img, dx, dy, dw, dh);
+            ctx.restore();
+
+            drawLabel(i, x, y, CELL_W, CELL_H, LABEL_H, imgH);
+            loadCount++;
+            if (loadCount === totalPhotos) downloadCanvas(canvas);
+          };
+          img.src = photos[i];
+        } else {
+          // Placeholder for empty holes
+          ctx.fillStyle = '#eeecea';
+          roundRect(ctx, x, y, CELL_W, imgH, 10);
+          ctx.fill();
+          ctx.fillStyle = '#bbb';
+          ctx.font = '32px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('📷', x + CELL_W / 2, y + imgH / 2 + 12);
+          drawLabel(i, x, y, CELL_W, CELL_H, LABEL_H, imgH);
+        }
+      }
+      // If no photos at all loaded via img.onload (all empty), still try download
+      if (totalPhotos === 0) downloadCanvas(canvas);
+    }
+
+    function drawLabel(i, x, y, cw, ch, lh, imgH) {
+      const labelY = y + imgH;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x, labelY, cw, lh);
+      // Rounded bottom
+      roundRectBottom(ctx, x, labelY, cw, lh, 10);
+      ctx.fill();
+
+      ctx.fillStyle = '#1a1a1a';
+      ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.textAlign = 'left';
+      const pubName = (document.getElementById('pub'+i) ? document.getElementById('pub'+i).textContent : pubDefaults[i]) || pubDefaults[i];
+      ctx.fillText('Hole '+(i+1)+' · '+pubName, x + 10, labelY + 16);
+
+      // Score line
+      if (s1[i]!==null && s2[i]!==null && locked[i]) {
+        ctx.fillStyle = '#888';
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+        const winner = s1[i] < s2[i] ? p1 : s2[i] < s1[i] ? p2 : 'Halved';
+        const scoreStr = p1+': '+s1[i]+'  '+p2+': '+s2[i]+'  →  '+(s1[i]===s2[i]?'Halved':winner+' wins');
+        ctx.fillText(scoreStr, x + 10, labelY + 30);
+      } else {
+        ctx.fillStyle = '#bbb';
+        ctx.font = '12px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText('No score recorded', x + 10, labelY + 30);
+      }
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x+r, y);
+      ctx.lineTo(x+w-r, y); ctx.arcTo(x+w, y, x+w, y+r, r);
+      ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+      ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+      ctx.lineTo(x, y+r); ctx.arcTo(x, y, x+r, y, r);
+      ctx.closePath();
+    }
+
+    function roundRectBottom(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x+w, y);
+      ctx.lineTo(x+w, y+h-r); ctx.arcTo(x+w, y+h, x+w-r, y+h, r);
+      ctx.lineTo(x+r, y+h); ctx.arcTo(x, y+h, x, y+h-r, r);
+      ctx.lineTo(x, y);
+      ctx.closePath();
+    }
+
+    function downloadCanvas(canvas) {
+      // Final score banner at bottom if scores exist
+      if (hasScores) {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.fillRect(0, CANVAS_H - 0, CANVAS_W, 0); // noop, scores already in labels
+      }
+      canvas.toBlob(function(blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'johnnys_stag_pub_golf.jpg';
+        a.click(); URL.revokeObjectURL(url);
+      }, 'image/jpeg', 0.92);
+    }
+
+    drawGrid();
+  }
   loadState();
   loadPhotos();
   buildHoles();
   renderScoreboard();
   checkStorageUsage();
+  checkExportButton();
 </script>
 </body>
 </html>
