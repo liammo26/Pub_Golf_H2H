@@ -31,6 +31,7 @@
     .stat.losing .val   { color: #991B1B; }
     .stat.losing .diff  { color: #991B1B; }
     .vs-line { text-align: center; font-size: 12px; color: #888; margin-bottom: 0.75rem; }
+
     .hole-card {
       background: #fff; border: 1px solid #e0ddd6;
       border-radius: 12px; padding: 0.875rem; margin-bottom: 0.625rem;
@@ -38,11 +39,13 @@
     }
     .hole-card.locked { background: #fafaf8; }
     .hole-card.upcoming { opacity: 0.45; pointer-events: none; }
+
     .hole-hdr { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
     .hole-num { font-size: 11px; font-weight: 600; color: #999; flex-shrink: 0; }
     .hole-pub { font-size: 15px; font-weight: 600; color: #1a1a1a; flex: 1; outline: none; cursor: text; border-bottom: 1px dashed #ccc; }
     .hole-pub:focus { background: #e8f0fe; border-radius: 4px; border-bottom-color: transparent; padding: 0 3px; }
     .hole-pub.locked-text { cursor: default; border-bottom-color: transparent; pointer-events: none; }
+
     .hole-meta { font-size: 11px; color: #888; margin-bottom: 10px; display: flex; flex-direction: column; gap: 3px; }
     .hole-meta span { outline: none; cursor: text; font-style: italic; }
     .hole-meta span:focus { background: #fffbe6; border-radius: 3px; font-style: normal; padding: 0 2px; }
@@ -50,6 +53,7 @@
     .meta-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #bbb; margin-right: 3px; font-style: normal !important; }
     .beer-lbl { color: #b07a00; }
     .rule-lbl { color: #a03030; }
+
     .hole-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .player-inp { display: flex; flex-direction: column; align-items: center; gap: 5px; }
     .player-inp label { font-size: 11px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
@@ -67,6 +71,7 @@
     .score-val.birdie { color: #166534; }
     .score-val.bogey  { color: #854D0E; }
     .score-val.double { color: #991B1B; }
+
     .par-row {
       display: flex; align-items: center; justify-content: center;
       gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;
@@ -78,6 +83,33 @@
       font-size: 14px; font-family: inherit;
     }
     .par-row input:disabled { background: #f5f5f2; color: #aaa; border-color: #e0ddd6; }
+
+    /* Photo area */
+    .photo-area { margin-top: 10px; }
+    .photo-preview {
+      width: 100%; border-radius: 8px; display: block;
+      max-height: 200px; object-fit: cover; margin-bottom: 6px;
+      border: 1px solid #e0ddd6;
+    }
+    .photo-preview.hidden { display: none; }
+    .photo-btn-row { display: flex; gap: 8px; }
+    .photo-btn {
+      flex: 1; padding: 8px; border-radius: 8px; border: 1px dashed #ccc;
+      background: #fafaf8; color: #666; font-size: 12px; font-weight: 500;
+      cursor: pointer; font-family: inherit; text-align: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .photo-btn:active { background: #f0ede8; }
+    .photo-btn.has-photo { border-style: solid; border-color: #e0ddd6; color: #1a1a1a; background: #fff; }
+    .photo-input { display: none; }
+    .photo-remove {
+      padding: 8px 12px; border-radius: 8px; border: 1px solid #fecaca;
+      background: #fff; color: #991B1B; font-size: 12px; cursor: pointer;
+      font-family: inherit; -webkit-tap-highlight-color: transparent;
+      display: none;
+    }
+    .photo-remove:active { background: #fee2e2; }
+
     .lock-btn {
       display: block; width: 100%; margin-top: 10px; padding: 10px;
       border-radius: 8px; border: none; font-size: 14px; font-weight: 600;
@@ -94,6 +126,7 @@
     .hole-result.p1     { color: #185FA5; }
     .hole-result.p2     { color: #993C1D; }
     .hole-result.halved { color: #888; }
+
     .reset-row { text-align: center; margin: 1rem 0 0.5rem; }
     .reset-row button {
       font-size: 13px; color: #888; border: 1px solid #ddd;
@@ -101,6 +134,13 @@
       cursor: pointer; font-family: inherit;
     }
     .reset-row button:active { background: #f0ede8; }
+
+    /* Storage warning */
+    .storage-warn {
+      display: none; background: #FEF9C3; border: 1px solid #FEF08A;
+      border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #854D0E;
+      margin-bottom: 0.75rem; text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -108,10 +148,16 @@
     <h1>🍺 Johnny's Stag — Pub Golf</h1>
     <p>Head-to-head tracker &nbsp;•&nbsp; Düsseldorf 🇩🇪</p>
   </div>
+
+  <div id="storage-warn" class="storage-warn">
+    ⚠️ Storage nearly full — photos may not save. Try removing an older one.
+  </div>
+
   <div class="name-inputs">
     <input id="p1name" type="text" value="Player 1" placeholder="Player 1" oninput="refreshNames(); saveState();">
     <input id="p2name" type="text" value="Player 2" placeholder="Player 2" oninput="refreshNames(); saveState();">
   </div>
+
   <div class="scoreboard">
     <div class="stat" id="sb1">
       <div class="name" id="sb1name">Player 1</div>
@@ -125,15 +171,22 @@
     </div>
   </div>
   <div class="vs-line" id="vs-line">Enter scores to start</div>
+
   <div id="holes"></div>
+
   <div class="reset-row">
     <button onclick="resetAll()">🔄 Reset everything</button>
   </div>
+
 <script>
   const HOLES = 9;
-  const STORAGE_KEY = 'pubgolf_duo';
+  const STORAGE_KEY  = 'pubgolf_duo_photos';
+  const PHOTO_PREFIX = 'pubgolf_photo_';
+  const MAX_PHOTO_DIM = 800; // compress to max 800px wide/tall
+  const PHOTO_QUALITY = 0.65;
+
   const pubDefaults  = ['Et Kabuffke','Uerige Brewery','Kasematten','Holy Craft Beer Bar','Brauerei Kurzer','Zum Schlussel','Suttons Irish Pub','Kreuzherreneck','Brauerei im Fuchschen'];
-  const beerDefaults = ['Killiepitsch Stube','Altbier','Schwarzbier','Altbier & Korn Chaser','Beer TBC','Radler','Jagermeister','Hugo Spritz','Altbier'];
+  const beerDefaults = ['Killiepitsch Stube','Altbier','Hugo Spritz','Schwarzbier','Altbier & Korn','Radler','Jagermeister','Underberg','Altbier'];
   const ruleDefaults = Array(HOLES).fill('No Rule');
   const parDefaults  = [1,4,3,4,5,3,2,1,4];
 
@@ -141,37 +194,103 @@
   let s1     = Array(HOLES).fill(null);
   let s2     = Array(HOLES).fill(null);
   let locked = Array(HOLES).fill(false);
-  let p1name = 'Johnny';
-  let p2name = 'Kat';
+  let photos = Array(HOLES).fill(null); // stored separately in localStorage by key
+
+  // ── Storage ──────────────────────────────────────────────────────────────
 
   function saveState() {
-    const state = {
-      s1, s2, locked, pars,
-      p1name: document.getElementById('p1name').value,
-      p2name: document.getElementById('p2name').value
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    try {
+      const state = {
+        s1, s2, locked, pars,
+        p1name: document.getElementById('p1name').value,
+        p2name: document.getElementById('p2name').value
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch(e) { showStorageWarn(); }
+  }
+
+  function savePhoto(index, dataUrl) {
+    try {
+      if (dataUrl) {
+        localStorage.setItem(PHOTO_PREFIX + index, dataUrl);
+      } else {
+        localStorage.removeItem(PHOTO_PREFIX + index);
+      }
+      checkStorageUsage();
+    } catch(e) {
+      showStorageWarn();
+      // Storage full — remove the photo from memory too
+      photos[index] = null;
+      alert('Storage full! Try removing a photo from an earlier pub to free up space.');
+    }
+  }
+
+  function loadPhotos() {
+    for (let i = 0; i < HOLES; i++) {
+      photos[i] = localStorage.getItem(PHOTO_PREFIX + i) || null;
+    }
   }
 
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return false;
-      const data = JSON.parse(raw);
-      s1     = data.s1     || Array(HOLES).fill(null);
-      s2     = data.s2     || Array(HOLES).fill(null);
-      locked = data.locked || Array(HOLES).fill(false);
-      pars   = data.pars   || [...parDefaults];
-      if (data.p1name) document.getElementById('p1name').value = data.p1name;
-      if (data.p2name) document.getElementById('p2name').value = data.p2name;
+      const d = JSON.parse(raw);
+      s1     = d.s1     || Array(HOLES).fill(null);
+      s2     = d.s2     || Array(HOLES).fill(null);
+      locked = d.locked || Array(HOLES).fill(false);
+      pars   = d.pars   || [...parDefaults];
+      if (d.p1name) document.getElementById('p1name').value = d.p1name;
+      if (d.p2name) document.getElementById('p2name').value = d.p2name;
       return true;
     } catch(e) { return false; }
   }
+
+  function checkStorageUsage() {
+    try {
+      let total = 0;
+      for (let k in localStorage) {
+        if (localStorage.hasOwnProperty(k)) total += localStorage[k].length * 2;
+      }
+      // Warn if over 4MB (most browsers cap at 5MB)
+      document.getElementById('storage-warn').style.display = total > 4 * 1024 * 1024 ? 'block' : 'none';
+    } catch(e) {}
+  }
+
+  function showStorageWarn() {
+    document.getElementById('storage-warn').style.display = 'block';
+  }
+
+  // ── Image compression ─────────────────────────────────────────────────────
+
+  function compressImage(file, callback) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        const canvas = document.createElement('canvas');
+        let w = img.width, h = img.height;
+        if (w > MAX_PHOTO_DIM || h > MAX_PHOTO_DIM) {
+          if (w > h) { h = Math.round(h * MAX_PHOTO_DIM / w); w = MAX_PHOTO_DIM; }
+          else       { w = Math.round(w * MAX_PHOTO_DIM / h); h = MAX_PHOTO_DIM; }
+        }
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        callback(canvas.toDataURL('image/jpeg', PHOTO_QUALITY));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // ── Hole logic ────────────────────────────────────────────────────────────
 
   function currentHole() {
     for (let i = 0; i < HOLES; i++) if (!locked[i]) return i;
     return HOLES;
   }
+
   function scoreClass(score, par) {
     if (score === null) return '';
     const d = score - par;
@@ -181,6 +300,7 @@
     if (d === 1)  return 'bogey';
     return 'double';
   }
+
   function buildHoles() {
     const container = document.getElementById('holes');
     container.innerHTML = '';
@@ -202,7 +322,7 @@
             <div class="score-btn-row">
               <button id="m1_${i}" ontouchstart="" onclick="adj(0,${i},-1)">−</button>
               <span class="score-val" id="sv1_${i}">—</span>
-              <button id="p1_${i}" ontouchstart="" onclick="adj(0,${i},1)">+</button>
+              <button id="p1b_${i}" ontouchstart="" onclick="adj(0,${i},1)">+</button>
             </div>
           </div>
           <div class="player-inp">
@@ -210,7 +330,7 @@
             <div class="score-btn-row">
               <button id="m2_${i}" ontouchstart="" onclick="adj(1,${i},-1)">−</button>
               <span class="score-val" id="sv2_${i}">—</span>
-              <button id="p2_${i}" ontouchstart="" onclick="adj(1,${i},1)">+</button>
+              <button id="p2b_${i}" ontouchstart="" onclick="adj(1,${i},1)">+</button>
             </div>
           </div>
         </div>
@@ -219,6 +339,16 @@
           <input type="number" id="par${i}" min="1" max="9" value="${pars[i]}" oninput="setPar(${i}, this.value)">
         </div>
         <div class="hole-result" id="res${i}"></div>
+
+        <div class="photo-area" id="photoArea${i}">
+          <img class="photo-preview hidden" id="photoImg${i}" src="" alt="Pub photo">
+          <div class="photo-btn-row">
+            <button class="photo-btn" id="photoBtn${i}" ontouchstart="" onclick="triggerPhoto(${i})">📷 Add photo</button>
+            <button class="photo-remove" id="photoRemove${i}" ontouchstart="" onclick="removePhoto(${i})">✕ Remove</button>
+          </div>
+          <input class="photo-input" type="file" id="photoInput${i}" accept="image/*" capture="environment" onchange="handlePhoto(${i}, this)">
+        </div>
+
         <button class="lock-btn" id="lockbtn${i}" onclick="lockHole(${i})">Lock in scores ✓</button>
         <div class="locked-badge" id="badge${i}">✓ Scores locked</div>
       `;
@@ -226,32 +356,87 @@
     }
     refreshNames();
     applyCardStates();
-    for (let i = 0; i < HOLES; i++) renderHole(i);
+    for (let i = 0; i < HOLES; i++) {
+      renderHole(i);
+      renderPhoto(i);
+    }
   }
+
+  function triggerPhoto(i) {
+    document.getElementById('photoInput' + i).click();
+  }
+
+  function handlePhoto(i, input) {
+    if (!input.files || !input.files[0]) return;
+    compressImage(input.files[0], function(dataUrl) {
+      photos[i] = dataUrl;
+      savePhoto(i, dataUrl);
+      renderPhoto(i);
+    });
+    input.value = ''; // reset so same file can be re-selected
+  }
+
+  function removePhoto(i) {
+    photos[i] = null;
+    savePhoto(i, null);
+    renderPhoto(i);
+  }
+
+  function renderPhoto(i) {
+    const img    = document.getElementById('photoImg' + i);
+    const btn    = document.getElementById('photoBtn' + i);
+    const remove = document.getElementById('photoRemove' + i);
+    if (photos[i]) {
+      img.src = photos[i];
+      img.classList.remove('hidden');
+      btn.textContent = '📷 Change photo';
+      btn.classList.add('has-photo');
+      remove.style.display = 'block';
+    } else {
+      img.src = '';
+      img.classList.add('hidden');
+      btn.textContent = '📷 Add photo';
+      btn.classList.remove('has-photo');
+      remove.style.display = 'none';
+    }
+  }
+
   function applyCardStates() {
     const active = currentHole();
     for (let i = 0; i < HOLES; i++) {
-      const card=document.getElementById('card'+i), lockBtn=document.getElementById('lockbtn'+i);
-      const badge=document.getElementById('badge'+i), parInp=document.getElementById('par'+i);
+      const card=document.getElementById('card'+i);
+      const lockBtn=document.getElementById('lockbtn'+i), badge=document.getElementById('badge'+i);
+      const parInp=document.getElementById('par'+i);
       const pub=document.getElementById('pub'+i), beer=document.getElementById('beer'+i), rule=document.getElementById('rule'+i);
-      const m1=document.getElementById('m1_'+i), p1=document.getElementById('p1_'+i);
-      const m2=document.getElementById('m2_'+i), p2=document.getElementById('p2_'+i);
+      const m1=document.getElementById('m1_'+i),  p1b=document.getElementById('p1b_'+i);
+      const m2=document.getElementById('m2_'+i),  p2b=document.getElementById('p2b_'+i);
+      const photoBtn=document.getElementById('photoBtn'+i), photoRemove=document.getElementById('photoRemove'+i);
+
       if (locked[i]) {
-        card.className='hole-card locked'; lockBtn.style.display='none'; badge.style.display='block';
-        parInp.disabled=true; [m1,p1,m2,p2].forEach(b=>b.disabled=true);
+        card.className='hole-card locked';
+        lockBtn.style.display='none'; badge.style.display='block';
+        parInp.disabled=true;
+        [m1,p1b,m2,p2b].forEach(b=>b.disabled=true);
         [pub,beer,rule].forEach(el=>{ el.contentEditable='false'; el.classList.add('locked-text'); });
+        // Photo still viewable when locked but can't be changed
+        photoBtn.disabled=true; photoBtn.style.opacity='0.4'; photoBtn.style.pointerEvents='none';
+        if (photoRemove) { photoRemove.disabled=true; photoRemove.style.opacity='0.4'; photoRemove.style.pointerEvents='none'; }
       } else if (i===active) {
-        card.className='hole-card'; lockBtn.style.display='block'; badge.style.display='none';
+        card.className='hole-card';
+        lockBtn.style.display='block'; badge.style.display='none';
         parInp.disabled=false; parInp.value=pars[i];
-        [m1,p1,m2,p2].forEach(b=>b.disabled=false);
+        [m1,p1b,m2,p2b].forEach(b=>b.disabled=false);
         [pub,beer,rule].forEach(el=>{ el.contentEditable='true'; el.classList.remove('locked-text'); });
+        photoBtn.disabled=false; photoBtn.style.opacity=''; photoBtn.style.pointerEvents='';
+        if (photoRemove) { photoRemove.disabled=false; photoRemove.style.opacity=''; photoRemove.style.pointerEvents=''; }
       } else {
-        card.className='hole-card upcoming'; lockBtn.style.display='block'; badge.style.display='none';
+        card.className='hole-card upcoming';
       }
     }
     const p1inp=document.getElementById('p1name'), p2inp=document.getElementById('p2name');
     p1inp.disabled=currentHole()>0; p2inp.disabled=currentHole()>0;
   }
+
   function lockHole(i) {
     if (s1[i]===null||s2[i]===null) {
       const n1=document.getElementById('p1name').value||'Player 1';
@@ -269,17 +454,20 @@
     const next=currentHole();
     if (next<HOLES) setTimeout(()=>document.getElementById('card'+next).scrollIntoView({behavior:'smooth',block:'start'}),150);
   }
+
   function adj(player, hole, delta) {
     if (locked[hole]) return;
     const arr=player===0?s1:s2;
     arr[hole]=Math.max(1,(arr[hole]===null?pars[hole]:arr[hole])+delta);
     renderHole(hole); renderScoreboard(); saveState();
   }
+
   function setPar(hole, val) {
     if (locked[hole]) return;
     pars[hole]=Math.max(1,parseInt(val)||3);
     renderHole(hole); renderScoreboard(); saveState();
   }
+
   function renderHole(i) {
     const v1=document.getElementById('sv1_'+i), v2=document.getElementById('sv2_'+i);
     const res=document.getElementById('res'+i), p=pars[i];
@@ -293,6 +481,7 @@
       else                   { res.textContent='Halved';        res.className='hole-result halved'; }
     } else { res.textContent=''; res.className='hole-result'; }
   }
+
   function renderScoreboard() {
     const hasLocked1=s1.some((v,i)=>locked[i]&&v!==null);
     const hasLocked2=s2.some((v,i)=>locked[i]&&v!==null);
@@ -326,6 +515,7 @@
     } else if (hasLocked2) { vsLine.textContent='Waiting for '+n1+'\'s scores...';
     } else { vsLine.textContent='Enter scores to start'; }
   }
+
   function refreshNames() {
     const n1=document.getElementById('p1name').value||'Player 1';
     const n2=document.getElementById('p2name').value||'Player 2';
@@ -338,20 +528,26 @@
     }
     renderScoreboard();
   }
+
   function resetAll() {
-    if (!confirm('Reset everything — scores, locks, and names?')) return;
+    if (!confirm('Reset everything — scores, locks, names and photos?')) return;
     localStorage.removeItem(STORAGE_KEY);
+    for (let i=0;i<HOLES;i++) localStorage.removeItem(PHOTO_PREFIX+i);
     s1=Array(HOLES).fill(null); s2=Array(HOLES).fill(null);
     locked=Array(HOLES).fill(false); pars=[...parDefaults];
+    photos=Array(HOLES).fill(null);
     document.getElementById('p1name').value='Player 1';
     document.getElementById('p2name').value='Player 2';
+    document.getElementById('storage-warn').style.display='none';
     buildHoles(); renderScoreboard();
   }
 
-  // Boot
+  // ── Boot ──────────────────────────────────────────────────────────────────
   loadState();
+  loadPhotos();
   buildHoles();
   renderScoreboard();
+  checkStorageUsage();
 </script>
 </body>
 </html>
